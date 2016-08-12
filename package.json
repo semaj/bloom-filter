@@ -8,7 +8,7 @@
   },
   "repository": {
     "type" : "git",
-    "url" : "http://github.com/bitpay/bloom-filter.git"
+    "url" : "http://github.com/semaj/bloom-filter.git"
   },
   "dependencies": {
     "murmur-hash": "1.0.0"
