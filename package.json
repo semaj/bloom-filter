@@ -1,7 +1,7 @@
 {
-  "name": "bloom-filter",
+  "name": "bloom-filter-remixed",
   "main": "lib/index.js",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "scripts": {
     "test": "node_modules/.bin/gulp test",
     "coverage": "node_modules/.bin/gulp coverage"
@@ -9,6 +9,9 @@
   "repository": {
     "type" : "git",
     "url" : "http://github.com/bitpay/bloom-filter.git"
+  },
+  "dependencies": {
+    "murmur-hash": "1.0.0"
   },
   "devDependencies": {
     "chai": "=1.10.0",
