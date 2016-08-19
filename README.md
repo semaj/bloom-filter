@@ -18,9 +18,9 @@ var falsePositiveRate = 0.01;
 var filter = BloomFilter.create(numberofElements, falsePositiveRate);
 
 // elements
-var a = new Buffer('99108ad8ed9bb6274d3980bab5a85c048f0950c8', 'hex');
-var b = new Buffer('19108ad8ed9bb6274d3980bab5a85c048f0950c8', 'hex');
-var c = new Buffer('b5a2c786d9ef4658287ced5914b37a1b4aa32eee', 'hex');
+var a = '99108ad8ed9bb6274d3980bab5a85c048f0950c8';
+var b = '19108ad8ed9bb6274d3980bab5a85c048f0950c8';
+var c = 'b5a2c786d9ef4658287ced5914b37a1b4aa32eee';
 
 // insert elements
 filter.insert(a);
