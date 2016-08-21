@@ -1,7 +1,7 @@
 {
   "name": "bloom-filter-remixed",
   "main": "lib/index.js",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "scripts": {
     "test": "node_modules/.bin/gulp test",
     "coverage": "node_modules/.bin/gulp coverage"
