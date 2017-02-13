@@ -5,8 +5,8 @@ var should = chai.should();
 var assert = require('assert');
 var expect = chai.expect;
 
-var Filter = require('../');
-var MurmurHash3 = Filter.MurmurHash3;
+var MLBFilter = require('../');
+var Filter = MLBFilter.Filter;
 
 // convert a hex string to a bytes buffer
 function ParseHex(str) {
@@ -21,41 +21,42 @@ function ParseHex(str) {
 
 describe('Bloom', function() {
 
-  describe('MurmurHash3', function() {
+  var a = '99108ad8ed9bb6274d3980bab5a85c048f0950c8';
+  var b = '19108ad8ed9bb6274d3980bab5a85c048f0950c8';
+  var c = 'b5a2c786d9ef4658287ced5914b37a1b4aa32eee';
+  var d = 'b9300670b4c5366e95b2699e8b18bc75e5f729c5';
 
-    // format: expected, seed, data
-    // see: https://github.com/bitcoin/bitcoin/blob/master/src/test/hash_tests.cpp
-    var data = [
-      [0x00000000, 0x00000000, ''],
-      [0x6a396f08, 0xFBA4C795, ''],
-      [0x81f16f39, 0xffffffff, ''],
-      [0x514e28b7, 0x00000000, '00'],
-      [0xea3f0b17, 0xFBA4C795, '00'],
-      [0xfd6cf10d, 0x00000000, 'ff'],
-      [0x16c6b7ab, 0x00000000, '0011'],
-      [0x8eb51c3d, 0x00000000, '001122'],
-      [0xb4471bf8, 0x00000000, '00112233'],
-      [0xe2301fa8, 0x00000000, '0011223344'],
-      [0xfc2e4a15, 0x00000000, '001122334455'],
-      [0xb074502c, 0x00000000, '00112233445566'],
-      [0x8034d2a0, 0x00000000, '0011223344556677'],
-      [0xb4698def, 0x00000000, '001122334455667788']
-    ];
+  describe('MLBFilter', function() {
+    it('exhibit no false positives', function() {
+      var s = [];
+      for (var i = 0; i < 1000; i++) {
+        s.push(i.toString());
+      }
+      var mlb = new MLBFilter(10, 20000, [a, b], s, 0.6);
+      assert(mlb.contains(a));
+      assert(mlb.contains(b));
+      for (var i = 0; i < 1000; i++) {
+        assert(!mlb.contains(!i.toString()));
+      }
+    });
 
-    data.forEach(function(d){
-      it('seed: "'+d[1].toString(16)+'" and data: "'+d[2]+'"', function() {
-        MurmurHash3(d[1], ParseHex(d[2])).should.equal(d[0]);
-      });
+    it('serialize and deserialize correctly', function() {
+      var s = [];
+      for (var i = 0; i < 1000; i++) {
+        s.push(i.toString());
+      }
+      var mlb = new MLBFilter(100, 20000, [a, b], s, 0.6);
+      assert(mlb.contains(a));
+      assert(mlb.contains(b));
+      for (var i = 0; i < 1000; i++) {
+        assert(!mlb.contains(!i.toString()));
+      }
+      var mlb2 = MLBFilter.fromJSON(mlb.toJSON()).toObject();
+      mlb2.should.deep.equal(mlb.toObject());
+
     });
 
   });
-
-  // test data from bitcoind
-  // see: https://github.com/bitcoin/bitcoin/blob/master/src/test/bloom_tests.cpp
-  var a = ParseHex('99108ad8ed9bb6274d3980bab5a85c048f0950c8');
-  var b = ParseHex('19108ad8ed9bb6274d3980bab5a85c048f0950c8');
-  var c = ParseHex('b5a2c786d9ef4658287ced5914b37a1b4aa32eee');
-  var d = ParseHex('b9300670b4c5366e95b2699e8b18bc75e5f729c5');
 
   describe('Filter', function() {
 
@@ -75,12 +76,6 @@ describe('Bloom', function() {
       expect(function(){
         var a = new Filter({vData: [121, 12, 200]});
       }).to.throw('Data object should include number of hash functions');
-    });
-
-    it('error if nHashFuncs exceeds max', function(){
-      expect(function(){
-        var a = new Filter({vData: [121, 12, 200], nHashFuncs: 51});
-      }).to.throw('"nHashFuncs" exceeded max size');
     });
 
     it('error if missing object', function(){
@@ -123,94 +118,44 @@ describe('Bloom', function() {
 
     it('correctly serialize to an object', function() {
 
-      var filter = Filter.create(3, 0.01, 0, Filter.BLOOM_UPDATE_ALL);
+      var filter = Filter.create(3, 0.01, 0);
 
-      filter.insert(ParseHex('99108ad8ed9bb6274d3980bab5a85c048f0950c8'));
-      assert(filter.contains(ParseHex('99108ad8ed9bb6274d3980bab5a85c048f0950c8')));
+      filter.insert(a);
+      assert(filter.contains(a));
 
       // one bit different in first byte
-      assert(!filter.contains(ParseHex('19108ad8ed9bb6274d3980bab5a85c048f0950c8')));
+      assert(!filter.contains(b));
 
-      filter.insert(ParseHex('b5a2c786d9ef4658287ced5914b37a1b4aa32eee'));
-      assert(filter.contains(ParseHex("b5a2c786d9ef4658287ced5914b37a1b4aa32eee")));
+      filter.insert(c);
+      assert(filter.contains(c));
 
-      filter.insert(ParseHex('b9300670b4c5366e95b2699e8b18bc75e5f729c5'));
-      assert(filter.contains(ParseHex('b9300670b4c5366e95b2699e8b18bc75e5f729c5')));
+      filter.insert(d);
+      assert(filter.contains(d));
 
       var actual = filter.toObject();
 
       var expected = {
-        vData: new Buffer([ 97, 78, 155 ]),
+        vData: new Buffer([ 88, 217, 138 ]).toString('base64'),
         nHashFuncs: 5,
-        nTweak: 0,
-        nFlags: 1
+        elements: 3,
+        fpRate: 0.01,
+        level: 0,
       };
 
       actual.should.deep.equal(expected);
 
     });
 
-    it('correctly serialize to an object with tweak', function() {
+    it('correctly serialize then deserialize', function() {
 
-      var filter = Filter.create(3, 0.01, 2147483649, Filter.BLOOM_UPDATE_ALL);
+      var filter = Filter.create(100, 0.255, 3);
+      filter.insert(a);
+      filter.insert(b);
+      filter.insert(c);
+      filter.insert(d);
+      var filter2 = Filter.fromJSON(filter.toJSON());
 
-      filter.insert(ParseHex('99108ad8ed9bb6274d3980bab5a85c048f0950c8'));
-      assert(filter.contains(ParseHex('99108ad8ed9bb6274d3980bab5a85c048f0950c8')));
-
-      // one bit different in first byte
-      assert(!filter.contains(ParseHex('19108ad8ed9bb6274d3980bab5a85c048f0950c8')));
-
-      filter.insert(ParseHex('b5a2c786d9ef4658287ced5914b37a1b4aa32eee'));
-      assert(filter.contains(ParseHex('b5a2c786d9ef4658287ced5914b37a1b4aa32eee')));
-
-      filter.insert(ParseHex('b9300670b4c5366e95b2699e8b18bc75e5f729c5'));
-      assert(filter.contains(ParseHex('b9300670b4c5366e95b2699e8b18bc75e5f729c5')));
-
-      var expected = {
-        vData: new Buffer([ 206, 66, 153 ]),
-        nHashFuncs: 5,
-        nTweak: 2147483649,
-        nFlags: 1
-      };
-
-      var actual = filter.toObject();
-      actual.should.deep.equal(expected);
-
-    });
-
-    it('correctly serialize filter with public keys added', function() {
-
-      var filter = Filter.create(2, 0.001, 0, Filter.BLOOM_UPDATE_ALL);
-
-      // WIF: 5Kg1gnAjaLfKiwhhPpGS3QfRg2m6awQvaj98JCZBZQ5SuS2F15C
-      filter.insert(new Buffer('045b81f0017e2091e2edcd5eecf10d5bdd120a5514cb3ee65b8447ec18bfc4575c6d5bf415e54e03b1067934a0f0ba76b01c6b9ab227142ee1d543764b69d901e0', 'hex'));
-      filter.insert(new Buffer('477abbacd4113f2e6b100526222eedd953c26a64', 'hex'));
-
-      var expectedFilter = new Filter({
-        vData: [ 143, 193, 107 ],
-        nHashFuncs: 8,
-        nTweak: 0,
-        nFlags: 1
-      });
-
-      filter.toObject().should.deep.equal(expectedFilter.toObject());
-
-    });
-
-
-    it('correctly deserialize', function() {
-
-      var filter = new Filter({
-        vData: [ 97, 78, 155 ],
-        nHashFuncs: 5,
-        nTweak: 0, nFlags: 1
-      });
-
-      assert(filter.contains(ParseHex('99108ad8ed9bb6274d3980bab5a85c048f0950c8')));
-      assert(!filter.contains(ParseHex('19108ad8ed9bb6274d3980bab5a85c048f0950c8')));
-      assert(filter.contains(ParseHex("b5a2c786d9ef4658287ced5914b37a1b4aa32eee")));
-      assert(filter.contains(ParseHex('b9300670b4c5366e95b2699e8b18bc75e5f729c5')));
-
+      filter.toObject().should.deep.equal(filter2.toObject());
     });
 
     it('clear the filter', function() {
@@ -221,15 +166,10 @@ describe('Bloom', function() {
       assert(!filter.contains(a));
     });
 
-    it('use the max number of hash funcs', function() {
-      var filter = Filter.create(10, 0.0000000000000001);
-      filter.nHashFuncs.should.equal(Filter.MAX_HASH_FUNCS);
-    });
-
     it('display in the console', function() {
       var filter = Filter.create(3, 0.01);
       filter.insert(a);
-      filter.inspect().should.equal('<BloomFilter:1,0,152 nHashFuncs:5 nTweak:0 nFlags:0>');
+      filter.inspect().should.equal('<BloomFilter:64,25,2 nHashFuncs:5 level:0>');
     });
 
   });

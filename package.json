@@ -1,5 +1,5 @@
 {
-  "name": "bloom-filter",
+  "name": "multi-level-bloom-filter-js",
   "main": "lib/index.js",
   "version": "0.2.0",
   "scripts": {
@@ -9,6 +9,9 @@
   "repository": {
     "type" : "git",
     "url" : "http://github.com/bitpay/bloom-filter.git"
+  },
+  "dependencies" : {
+    "murmur-hash" : "latest"
   },
   "devDependencies": {
     "chai": "=1.10.0",
